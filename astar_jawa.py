@@ -1,6 +1,6 @@
 import ctypes
 import tkinter as tk
-from tkinter import messagebox
+from tkinter import messagebox, ttk
 import tkintermapview
 import heapq
 import math
@@ -17,7 +17,7 @@ except Exception:
 # 1. DATA GEOGRAFIS WISATA & GRAF
 # ==========================================
 
-# Titik Koordinat Tempat Pariwisata Populer (Mainstream) di Jawa
+# Titik Koordinat Tempat Pariwisata Populer di Jawa
 kordinat_wisata = {
     'Pantai Anyer (Banten)': (-6.0753, 105.8856),
     'Ancol (Jakarta)': (-6.1246, 106.8322),
@@ -40,6 +40,31 @@ kordinat_wisata = {
     'Gunung Bromo': (-7.9425, 112.9530),
     'Kawah Ijen (Banyuwangi)': (-8.0584, 114.2420),
     'TN Baluran (Situbondo)': (-7.8284, 114.3750)
+}
+
+# Informasi Detail Tempat Pariwisata
+info_wisata = {
+    'Pantai Anyer (Banten)': {'jam': '24 Jam', 'tiket': 'Rp 25.000'},
+    'Ancol (Jakarta)': {'jam': '06:00 - 23:00', 'tiket': 'Rp 30.000'},
+    'Monas (Jakarta)': {'jam': '06:00 - 16:00', 'tiket': 'Rp 15.000'},
+    'Kebun Raya Bogor': {'jam': '08:00 - 16:00', 'tiket': 'Rp 16.500'},
+    'Taman Safari (Puncak)': {'jam': '08:30 - 17:00', 'tiket': 'Rp 230.000'},
+    'Tangkuban Perahu (Bandung)': {'jam': '07:00 - 17:00', 'tiket': 'Rp 20.000'},
+    'Kawah Putih (Ciwidey)': {'jam': '07:30 - 17:00', 'tiket': 'Rp 28.000'},
+    'Pantai Pangandaran': {'jam': '24 Jam', 'tiket': 'Rp 10.000'},
+    'Lawang Sewu (Semarang)': {'jam': '08:00 - 20:00', 'tiket': 'Rp 20.000'},
+    'Dieng Plateau (Wonosobo)': {'jam': '07:00 - 17:00', 'tiket': 'Rp 20.000'},
+    'Candi Borobudur (Magelang)': {'jam': '06:30 - 16:30', 'tiket': 'Rp 50.000'},
+    'Malioboro (Jogja)': {'jam': '24 Jam', 'tiket': 'Gratis'},
+    'Pantai Parangtritis (Jogja)': {'jam': '24 Jam', 'tiket': 'Rp 10.000'},
+    'Candi Prambanan': {'jam': '06:30 - 17:00', 'tiket': 'Rp 50.000'},
+    'Keraton Solo': {'jam': '09:00 - 14:00', 'tiket': 'Rp 15.000'},
+    'Tawangmangu (Karanganyar)': {'jam': '08:00 - 17:00', 'tiket': 'Rp 20.000'},
+    'Kebun Binatang Surabaya': {'jam': '08:00 - 16:00', 'tiket': 'Rp 15.000'},
+    'Jatim Park (Batu)': {'jam': '09:30 - 17:30', 'tiket': 'Rp 140.000'},
+    'Gunung Bromo': {'jam': '24 Jam', 'tiket': 'Rp 29.000'},
+    'Kawah Ijen (Banyuwangi)': {'jam': '02:00 - 12:00', 'tiket': 'Rp 7.500'},
+    'TN Baluran (Situbondo)': {'jam': '07:30 - 16:00', 'tiket': 'Rp 15.000'}
 }
 
 # Graf rute antar tempat wisata (Estimasi Jarak Berkendara dalam KM)
@@ -134,31 +159,49 @@ class MapPathfinderApp:
         self.marker_list = [] 
 
         # --- SIDEBAR ---
-        self.control_panel = tk.Frame(root, width=330, bg=self.bg_sidebar)
+        self.control_panel = tk.Frame(root, width=340, bg=self.bg_sidebar)
         self.control_panel.pack(side="left", fill="y")
         self.control_panel.pack_propagate(False) 
 
         tk.Label(self.control_panel, text="🌴 A* Roadtrip", font=("Segoe UI", 20, "bold"), bg=self.bg_sidebar, fg=self.color_accent).pack(pady=(30, 5), padx=20, anchor="w")
-        tk.Label(self.control_panel, text="Edisi Wisata Mainstream Jawa", font=("Segoe UI", 10), bg=self.bg_sidebar, fg="#A6ADC8").pack(pady=(0, 20), padx=20, anchor="w")
+        tk.Label(self.control_panel, text="Edisi Wisata Mainstream Jawa", font=("Segoe UI", 10), bg=self.bg_sidebar, fg="#A6ADC8").pack(pady=(0, 10), padx=20, anchor="w")
 
         tk.Frame(self.control_panel, height=1, bg="#313244").pack(fill="x", padx=20, pady=5)
 
-        instruksi_frame = tk.Frame(self.control_panel, bg=self.bg_sidebar)
-        instruksi_frame.pack(fill="x", padx=20, pady=15)
+        # --- FITUR PENCARIAN (DROPDOWN) ---
+        search_frame = tk.Frame(self.control_panel, bg=self.bg_sidebar)
+        search_frame.pack(fill="x", padx=20, pady=10)
         
-        tk.Label(instruksi_frame, text="CARA PENGGUNAAN", font=("Segoe UI", 9, "bold"), bg=self.bg_sidebar, fg="#A6ADC8").pack(anchor="w", pady=(0,5))
+        tk.Label(search_frame, text="PILIH RUTE", font=("Segoe UI", 9, "bold"), bg=self.bg_sidebar, fg="#A6ADC8").pack(anchor="w", pady=(0,5))
+
+        # Mengatur style combobox agar lebih rapi
+        style = ttk.Style()
+        style.theme_use('clam')
         
-        instructions = (
-            "1. Klik PIN untuk lokasi Berangkat.\n"
-            "2. Klik PIN lain untuk lokasi Tujuan.\n"
-            "3. Rute darat terpendek akan muncul."
+        self.combo_awal = ttk.Combobox(search_frame, values=list(kordinat_wisata.keys()), state="readonly")
+        self.combo_awal.pack(fill="x", pady=2)
+        self.combo_awal.set("Titik Keberangkatan...")
+
+        self.combo_tujuan = ttk.Combobox(search_frame, values=list(kordinat_wisata.keys()), state="readonly")
+        self.combo_tujuan.pack(fill="x", pady=2)
+        self.combo_tujuan.set("Tujuan Akhir...")
+
+        self.btn_cari = tk.Button(
+            search_frame, 
+            text="🔍 Cari Rute", 
+            font=("Segoe UI", 9, "bold"), 
+            bg=self.color_accent, 
+            fg="#11111B", 
+            relief="flat", 
+            cursor="hand2",
+            command=self.cari_via_dropdown
         )
-        tk.Label(instruksi_frame, text=instructions, font=("Segoe UI", 10), justify="left", bg=self.bg_sidebar, fg=self.bg_content).pack(anchor="w")
+        self.btn_cari.pack(fill="x", pady=5)
 
         tk.Frame(self.control_panel, height=1, bg="#313244").pack(fill="x", padx=20, pady=5)
 
-        self.lbl_status = tk.Label(self.control_panel, text="Pilih Titik Berangkat...", fg=self.color_accent, bg=self.bg_sidebar, font=("Segoe UI", 11, "bold"))
-        self.lbl_status.pack(pady=20, padx=20, anchor="w")
+        self.lbl_status = tk.Label(self.control_panel, text="Pilih rute dari daftar/peta", fg=self.color_accent, bg=self.bg_sidebar, font=("Segoe UI", 11, "bold"))
+        self.lbl_status.pack(pady=10, padx=20, anchor="w")
 
         # Scrollable Frame untuk Hasil yang Panjang
         self.result_canvas = tk.Canvas(self.control_panel, bg="#313244", bd=0, highlightthickness=0)
@@ -168,10 +211,10 @@ class MapPathfinderApp:
         self.result_canvas.pack(fill="both", expand=True, padx=(20, 0), pady=5)
         self.scrollbar.pack(side="right", fill="y", pady=5)
         
-        self.result_canvas.create_window((0, 0), window=self.result_frame, anchor="nw", width=280)
+        self.result_canvas.create_window((0, 0), window=self.result_frame, anchor="nw", width=290)
         self.result_canvas.configure(yscrollcommand=self.scrollbar.set)
         
-        self.lbl_hasil = tk.Label(self.result_frame, text="Belum ada rute\nyang dihitung.", justify="left", bg="#313244", fg=self.bg_content, wraplength=240, font=("Segoe UI", 10))
+        self.lbl_hasil = tk.Label(self.result_frame, text="Belum ada rute\nyang dihitung.", justify="left", bg="#313244", fg=self.bg_content, wraplength=250, font=("Segoe UI", 10))
         self.lbl_hasil.pack(fill="x", anchor="w")
 
         self.result_frame.bind("<Configure>", lambda e: self.result_canvas.configure(scrollregion=self.result_canvas.bbox("all")))
@@ -188,7 +231,7 @@ class MapPathfinderApp:
             command=self.reset_selection,
             pady=8
         )
-        self.btn_reset.pack(side="bottom", fill="x", padx=20, pady=30)
+        self.btn_reset.pack(side="bottom", fill="x", padx=20, pady=20)
 
         # --- MAP WIDGET ---
         self.map_frame = tk.Frame(root, bg="#11111B")
@@ -205,6 +248,30 @@ class MapPathfinderApp:
         self.map_widget.set_zoom(7.5) 
 
         self.buat_marker_wisata()
+
+    def cari_via_dropdown(self):
+        awal = self.combo_awal.get()
+        tujuan = self.combo_tujuan.get()
+
+        if awal not in kordinat_wisata or tujuan not in kordinat_wisata:
+            messagebox.showwarning("Perhatian", "Silakan pilih titik keberangkatan dan tujuan dari dropdown!")
+            return
+
+        if awal == tujuan:
+            messagebox.showwarning("Perhatian", "Tujuan tidak boleh sama dengan titik awal.")
+            return
+
+        # [PERBAIKAN BUG]: Hapus garis rute lama jika ada sebelum mencari rute baru
+        if self.map_path:
+            self.map_path.delete()
+            self.map_path = None
+
+        self.lokasi_awal = awal
+        self.lokasi_tujuan = tujuan
+        self.lbl_status.config(text="Rute Wisata Ditemukan!", fg=self.color_end)
+        
+        self.buat_marker_wisata()
+        self.hitung_dan_gambar_rute()
 
     def buat_marker_wisata(self):
         self.map_widget.delete_all_marker()
@@ -237,6 +304,7 @@ class MapPathfinderApp:
 
         if self.lokasi_awal is None:
             self.lokasi_awal = nama_lokasi
+            self.combo_awal.set(nama_lokasi) # Sinkronisasi dropdown
             self.lbl_status.config(text=f"Start: {self.lokasi_awal}", fg=self.color_start)
             self.buat_marker_wisata() 
         
@@ -246,6 +314,7 @@ class MapPathfinderApp:
                 return
 
             self.lokasi_tujuan = nama_lokasi
+            self.combo_tujuan.set(nama_lokasi) # Sinkronisasi dropdown
             self.lbl_status.config(text="Rute Wisata Ditemukan!", fg=self.color_end)
             
             self.buat_marker_wisata() 
@@ -254,18 +323,39 @@ class MapPathfinderApp:
         else:
             self.reset_selection()
             self.lokasi_awal = nama_lokasi
+            self.combo_awal.set(nama_lokasi)
             self.lbl_status.config(text=f"Start: {self.lokasi_awal}", fg=self.color_start)
             self.buat_marker_wisata()
 
     def hitung_dan_gambar_rute(self):
         jalur, total_jarak = algoritma_astar(self.lokasi_awal, self.lokasi_tujuan)
         
+        # [PERBAIKAN BUG]: Pastikan jalur sebelumnya benar-benar terhapus sebelum menggambar ulang
+        if self.map_path:
+            self.map_path.delete()
+            self.map_path = None
+            
         if jalur:
             kordinat_jalur = [kordinat_wisata[lokasi] for lokasi in jalur]
             self.map_path = self.map_widget.set_path(kordinat_jalur, color=self.color_path, width=4)
             
-            jalur_str = "\n⬇\n".join(jalur)
-            teks_hasil = f"ESTIMASI JARAK:\n{round(total_jarak, 2)} KM\n\nITINERARY PERJALANAN:\n{jalur_str}"
+            # Merangkai Output Teks dengan Informasi Pariwisata
+            jalur_str = ""
+            for i, lokasi in enumerate(jalur):
+                info = info_wisata.get(lokasi, {})
+                jam = info.get('jam', '-')
+                tiket = info.get('tiket', '-')
+                
+                if i == 0:
+                    simbol = "📍 [START]"
+                elif i == len(jalur) - 1:
+                    simbol = "🏁 [FINISH]"
+                else:
+                    simbol = "🚗 [LEWAT]"
+                    
+                jalur_str += f"{simbol} {lokasi}\n      🕒 Buka: {jam}\n      🎟️ Tiket: {tiket}\n\n"
+
+            teks_hasil = f"ESTIMASI JARAK:\n{round(total_jarak, 2)} KM\n\nITINERARY PERJALANAN:\n\n{jalur_str}"
             self.lbl_hasil.config(text=teks_hasil)
         else:
             self.lbl_hasil.config(text="Jalur darat antar lokasi wisata ini belum terhubung di graf.")
@@ -274,13 +364,16 @@ class MapPathfinderApp:
         self.lokasi_awal = None
         self.lokasi_tujuan = None
         
+        self.combo_awal.set("Titik Keberangkatan...")
+        self.combo_tujuan.set("Tujuan Akhir...")
+        
         self.buat_marker_wisata() 
 
         if self.map_path:
             self.map_path.delete()
             self.map_path = None
             
-        self.lbl_status.config(text="Pilih Titik Berangkat...", fg=self.color_accent)
+        self.lbl_status.config(text="Pilih rute dari daftar/peta", fg=self.color_accent)
         self.lbl_hasil.config(text="Belum ada rute\nyang dihitung.")
 
 if __name__ == "__main__":
