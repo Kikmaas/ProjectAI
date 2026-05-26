@@ -4,10 +4,8 @@ from tkinter import messagebox, ttk
 import tkintermapview
 import heapq
 import math
+import requests
 
-# ==========================================
-# FIX UI BURAM (High-DPI Awareness Windows)
-# ==========================================
 try:
     ctypes.windll.shcore.SetProcessDpiAwareness(1)
 except Exception:
@@ -17,7 +15,6 @@ except Exception:
 # 1. DATA GEOGRAFIS WISATA & GRAF
 # ==========================================
 
-# Titik Koordinat Tempat Pariwisata Populer di Jawa
 kordinat_wisata = {
     'Pantai Anyer (Banten)': (-6.0753, 105.8856),
     'Ancol (Jakarta)': (-6.1246, 106.8322),
@@ -42,7 +39,6 @@ kordinat_wisata = {
     'TN Baluran (Situbondo)': (-7.8284, 114.3750)
 }
 
-# Informasi Detail Tempat Pariwisata
 info_wisata = {
     'Pantai Anyer (Banten)': {'jam': '24 Jam', 'tiket': 'Rp 25.000'},
     'Ancol (Jakarta)': {'jam': '06:00 - 23:00', 'tiket': 'Rp 30.000'},
@@ -67,7 +63,6 @@ info_wisata = {
     'TN Baluran (Situbondo)': {'jam': '07:30 - 16:00', 'tiket': 'Rp 15.000'}
 }
 
-# Graf rute antar tempat wisata (Estimasi Jarak Berkendara dalam KM)
 graf_wisata = {
     'Pantai Anyer (Banten)': {'Ancol (Jakarta)': 130},
     'Ancol (Jakarta)': {'Pantai Anyer (Banten)': 130, 'Monas (Jakarta)': 10},
@@ -134,6 +129,19 @@ def algoritma_astar(awal, tujuan):
                 
     return None, float('inf')
 
+def dapatkan_lokasi_saat_ini():
+    """Mengambil koordinat Latitude & Longitude berdasarkan IP Address"""
+    try:
+        # Memanggil API Geolocation gratis
+        response = requests.get('http://ip-api.com/json/')
+        data = response.json()
+        if data['status'] == 'success':
+            return data['lat'], data['lon'], data['city']
+        return None, None, None
+    except:
+        messagebox.showerror("Error", "Gagal mendapatkan lokasi. Pastikan internet terhubung.")
+        return None, None, None
+
 # ==========================================
 # 3. UI DENGAN PETA (TkinterMapView)
 # ==========================================
@@ -198,6 +206,18 @@ class MapPathfinderApp:
         )
         self.btn_cari.pack(fill="x", pady=5)
 
+        self.btn_lokasi_saya = tk.Button(
+            search_frame, 
+            text="📍 Lokasi Saya Saat Ini", 
+            font=("Segoe UI", 9, "bold"), 
+            bg="#89DCEB",
+            fg="#11111B", 
+            relief="flat", 
+            cursor="hand2",
+            command=self.tampilkan_lokasi_saya
+        )
+        self.btn_lokasi_saya.pack(fill="x", pady=(10, 5))
+
         tk.Frame(self.control_panel, height=1, bg="#313244").pack(fill="x", padx=20, pady=5)
 
         self.lbl_status = tk.Label(self.control_panel, text="Pilih rute dari daftar/peta", fg=self.color_accent, bg=self.bg_sidebar, font=("Segoe UI", 11, "bold"))
@@ -248,6 +268,33 @@ class MapPathfinderApp:
         self.map_widget.set_zoom(7.5) 
 
         self.buat_marker_wisata()
+
+    def tampilkan_lokasi_saya(self):
+        self.lbl_status.config(text="Mencari lokasi...", fg=self.color_accent)
+        self.root.update() # Memaksa UI untuk render teks status
+
+        lat, lon, kota = dapatkan_lokasi_saat_ini()
+        
+        if lat and lon:
+            # Hapus path lama jika ada
+            if self.map_path:
+                self.map_path.delete()
+                self.map_path = None
+                
+            # Set posisi peta ke lokasi user dan beri zoom
+            self.map_widget.set_position(lat, lon)
+            self.map_widget.set_zoom(12)
+            
+            # Berikan marker khusus warna biru (melambangkan lokasi user)
+            self.map_widget.set_marker(
+                lat, lon, 
+                text=f"Lokasi Kamu ({kota})", 
+                marker_color_circle="white",
+                marker_color_outside="#1E90FF" # Biru terang ala Google Maps
+            )
+            self.lbl_status.config(text=f"Lokasi terdeteksi di sekitar {kota}", fg="#A6E3A1")
+        else:
+            self.lbl_status.config(text="Gagal mendeteksi lokasi", fg=self.color_end)
 
     def cari_via_dropdown(self):
         awal = self.combo_awal.get()
