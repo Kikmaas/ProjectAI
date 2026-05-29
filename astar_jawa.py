@@ -174,7 +174,7 @@ class MapPathfinderApp:
         self.color_start = "#A6E3A1"      
         self.color_end = "#F38BA8"        
         self.color_default = "#F9E2AF"    
-        self.color_path = "#A6E3A1"       
+        self.color_path = "#FFD700"       
 
         self.lokasi_awal = None
         self.lokasi_tujuan = None
